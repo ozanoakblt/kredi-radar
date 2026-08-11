@@ -57,8 +57,14 @@ ingest → validate → preprocess/feature engineering → train → threshold k
 
 ### Seviye 1 (Notebook)
 
+    pip install -r requirements.txt
+    jupyter notebook KrediRadar_seviye1_tam.ipynb
 
 ### Seviye 2 (Airflow Pipeline)
+
+    docker-compose up airflow-init
+    docker-compose up
+
 Airflow arayüzü: http://localhost:8081 (admin/admin)
 
 ## Yol Haritasının Devamı
