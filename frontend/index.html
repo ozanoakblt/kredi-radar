@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>Program Yöneticisi - KrediRadar</title>
+<style>
+  * { box-sizing: border-box; -webkit-font-smoothing: none; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    font-family: Tahoma, "MS Sans Serif", Geneva, sans-serif;
+    font-size: 12px;
+    overflow: hidden;
+  }
+
+  :root {
+    --face: #C0C0C0;
+    --hi: #FFFFFF;
+    --lo: #808080;
+    --lo2: #404040;
+    --navy: #000080;
+    --navy-fade: #1084D0;
+    --teal: #008080;
+    --purple: #7B0080;
+  }
+
+  /* ---------- masaüstü ---------- */
+  #desktop {
+    position: relative;
+    width: 100vw; height: 100vh;
+    background-color: var(--teal);
+    background-image:
+      repeating-linear-gradient(45deg, transparent 0 12px, rgba(123,0,128,0.55) 12px 24px),
+      repeating-linear-gradient(-45deg, transparent 0 12px, rgba(0,0,0,0.18) 12px 24px);
+    cursor: default;
+    user-select: none;
+  }
+
+  /* ---------- ortak 3B çerçeve ---------- */
+  .raised {
+    border-top: 2px solid var(--hi); border-left: 2px solid var(--hi);
+    border-bottom: 2px solid var(--lo2); border-right: 2px solid var(--lo2);
+    box-shadow: inset 1px 1px 0 #dfdfdf, inset -1px -1px 0 var(--lo);
+    background: var(--face);
+  }
+  .sunken {
+    border-top: 2px solid var(--lo2); border-left: 2px solid var(--lo2);
+    border-bottom: 2px solid var(--hi); border-right: 2px solid var(--hi);
+    box-shadow: inset 1px 1px 0 var(--lo), inset -1px -1px 0 #dfdfdf;
+    background: #fff;
+  }
+
+  /* ---------- pencere ---------- */
+  .win {
+    position: absolute;
+    background: var(--face);
+    border-top: 2px solid var(--hi); border-left: 2px solid var(--hi);
+    border-bottom: 2px solid var(--lo2); border-right: 2px solid var(--lo2);
+    box-shadow: inset 1px 1px 0 #dfdfdf, inset -1px -1px 0 var(--lo), 4px 4px 12px rgba(0,0,0,.4);
+    min-width: 260px;
+    display: flex; flex-direction: column;
+  }
+  .titlebar {
+    background: linear-gradient(90deg, var(--navy), var(--navy-fade));
+    color: #fff; font-weight: bold; font-size: 12px;
+    padding: 3px 4px; display: flex; align-items: center; gap: 5px;
+    cursor: move;
+  }
+  .titlebar .ticon { width: 14px; height: 14px; background: var(--face); flex-shrink: 0; }
+  .titlebar .ttext { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: .3px; }
+  .winbtn {
+    width: 16px; height: 14px; background: var(--face);
+    border-top: 1px solid var(--hi); border-left: 1px solid var(--hi);
+    border-bottom: 1px solid var(--lo2); border-right: 1px solid var(--lo2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; color: #000; cursor: pointer; line-height: 0;
+  }
+  .winbtn:active { border-color: var(--lo2) var(--hi) var(--hi) var(--lo2); }
+
+  .menubar {
+    background: var(--face); display: flex; gap: 14px; padding: 3px 8px;
+    border-bottom: 1px solid var(--lo);
+    font-size: 12px; position: relative;
+  }
+  .menubar span { cursor: default; }
+  .menubar span:hover { background: var(--navy); color: #fff; padding: 0 2px; margin: 0 -2px; }
+  .dropdown {
+    position: absolute; top: 20px; left: 8px; background: var(--face);
+    border-top: 1px solid var(--hi); border-left: 1px solid var(--hi);
+    border-bottom: 1px solid var(--lo2); border-right: 1px solid var(--lo2);
+    box-shadow: 2px 2px 6px rgba(0,0,0,.4);
+    min-width: 140px; display: none; z-index: 50; padding: 2px 0;
+  }
+  .dropdown.show { display: block; }
+  .dropdown div { padding: 3px 20px; cursor: default; white-space: nowrap; }
+  .dropdown div:hover { background: var(--navy); color: #fff; }
+
+  .winbody { padding: 10px; flex: 1; overflow: auto; }
+
+  /* ---------- ikon ızgarası ---------- */
+  .icon-grid {
+    display: grid; grid-template-columns: repeat(4, 72px); gap: 6px 4px;
+  }
+  .app-icon {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 6px 2px; cursor: pointer;
+  }
+  .app-icon.selected .icon-label { background: var(--navy); color: #fff; }
+  .app-icon svg { image-rendering: pixelated; }
+  .icon-label {
+    font-size: 11px; text-align: center; color: #000; line-height: 1.2;
+    padding: 1px 2px;
+  }
+
+  /* ---------- alt grup ikonları (kapalı klasörler) ---------- */
+  .group-row { display: flex; gap: 18px; margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--lo); flex-wrap: wrap; }
+  .group-icon { display: flex; flex-direction: column; align-items: center; gap: 3px; width: 70px; }
+  .group-icon.disabled { opacity: .45; }
+  .group-icon .glabel { font-size: 11px; text-align: center; }
+
+  /* ---------- form ---------- */
+  .field-row { display: flex; align-items: center; margin-bottom: 6px; gap: 6px; }
+  .field-row label { width: 118px; font-size: 12px; flex-shrink: 0; }
+  .field-row input, .field-row select {
+    flex: 1; font-family: Tahoma, sans-serif; font-size: 12px;
+    padding: 2px 3px; border: none; outline: none;
+  }
+  .field-row input, .field-row select { }
+  .btn {
+    background: var(--face); font-size: 12px; padding: 4px 14px; cursor: pointer;
+    min-width: 76px; text-align: center;
+  }
+  .btn:active { border-top: 2px solid var(--lo2); border-left: 2px solid var(--lo2); border-bottom: 2px solid var(--hi); border-right: 2px solid var(--hi); }
+  .btn-row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+
+  /* ---------- messagebox ---------- */
+  .msgbox-body { display: flex; gap: 12px; align-items: flex-start; padding: 6px 4px 14px 4px; }
+  .msg-icon { width: 32px; height: 32px; flex-shrink: 0; }
+  .msg-text { font-size: 12px; line-height: 1.5; padding-top: 4px; white-space: pre-line; }
+
+  .statusbar {
+    border-top: 1px solid var(--hi); padding: 2px 6px; font-size: 11px; color: #000;
+  }
+
+  ::-webkit-scrollbar { width: 16px; height: 16px; }
+  ::-webkit-scrollbar-track { background: var(--face); }
+  ::-webkit-scrollbar-thumb { background: var(--face); border: 1px solid var(--lo2); box-shadow: inset 1px 1px 0 #dfdfdf, inset -1px -1px 0 var(--lo); }
+</style>
+</head>
+<body>
+<div id="desktop">
+
+  <!-- ================= ANA PENCERE: Program Yöneticisi ================= -->
+  <div class="win" id="win-main" style="left:60px; top:40px; width:460px;">
+    <div class="titlebar" data-drag="win-main">
+      <div class="ticon"></div>
+      <div class="ttext">Program Yöneticisi - KrediRadar Banka Sistemi</div>
+      <div class="winbtn" title="Simge durumuna küçült">▁</div>
+      <div class="winbtn" title="Büyüt">□</div>
+    </div>
+    <div class="menubar">
+      <span data-menu="m-dosya">Dosya</span>
+      <span>Seçenekler</span>
+      <span>Pencere</span>
+      <span data-menu="m-bilgi">Bilgi</span>
+      <div class="dropdown" id="m-dosya">
+        <div onclick="closeMenus()">Yeni...</div>
+        <div onclick="closeMenus()">Çalıştır...</div>
+        <div onclick="closeMenus(); pingHealth();">Bağlantıyı Sına</div>
+        <div onclick="closeMenus()">Çıkış</div>
+      </div>
+      <div class="dropdown" id="m-bilgi">
+        <div onclick="closeMenus(); openWin('win-about');">Program Yöneticisi Hakkında</div>
+      </div>
+    </div>
+    <div class="winbody">
+      <div class="icon-grid">
+
+        <div class="app-icon" ondblclick="openWin('win-form')">
+          <svg width="32" height="32" viewBox="0 0 16 16">
+            <rect x="1" y="4" width="14" height="9" fill="#c0c0c0" stroke="#000"/>
+            <rect x="1" y="4" width="14" height="3" fill="#000080"/>
+            <rect x="2" y="9" width="4" height="1" fill="#000"/>
+            <rect x="2" y="11" width="6" height="1" fill="#000"/>
+            <rect x="10" y="9" width="4" height="3" fill="#c0c000" stroke="#000"/>
+          </svg>
+          <div class="icon-label">Kredi<br>Başvurusu</div>
+        </div>
+
+        <div class="app-icon" ondblclick="openWin('win-model')">
+          <svg width="32" height="32" viewBox="0 0 16 16">
+            <rect x="1" y="1" width="14" height="14" fill="#fff" stroke="#000"/>
+            <rect x="3" y="9" width="2" height="4" fill="#000080"/>
+            <rect x="6" y="6" width="2" height="7" fill="#008080"/>
+            <rect x="9" y="8" width="2" height="5" fill="#800080"/>
+            <rect x="12" y="4" width="2" height="9" fill="#c00000"/>
+          </svg>
+          <div class="icon-label">Model<br>Bilgisi</div>
+        </div>
+
+        <div class="app-icon" ondblclick="pingHealth()">
+          <svg width="32" height="32" viewBox="0 0 16 16">
+            <rect x="1" y="1" width="14" height="14" fill="#c0c0c0" stroke="#000"/>
+            <circle cx="8" cy="8" r="4" fill="#00c000" stroke="#000"/>
+            <rect x="7" y="3" width="2" height="2" fill="#000"/>
+          </svg>
+          <div class="icon-label">Sistem<br>Durumu</div>
+        </div>
+
+        <div class="app-icon" ondblclick="openWin('win-readme')">
+          <svg width="32" height="32" viewBox="0 0 16 16">
+            <rect x="2" y="2" width="12" height="12" fill="#fff" stroke="#000"/>
+            <rect x="4" y="4" width="8" height="1" fill="#000080"/>
+            <rect x="4" y="6" width="8" height="1" fill="#808080"/>
+            <rect x="4" y="8" width="6" height="1" fill="#808080"/>
+            <rect x="4" y="10" width="8" height="1" fill="#808080"/>
+          </svg>
+          <div class="icon-label">Beni Oku</div>
+        </div>
+
+      </div>
+
+      <div class="group-row">
+        <div class="group-icon">
+          <svg width="30" height="26" viewBox="0 0 20 16"><rect x="1" y="3" width="18" height="12" fill="#e0c060" stroke="#000"/><rect x="1" y="1" width="9" height="3" fill="#e0c060" stroke="#000"/></svg>
+          <div class="glabel">KrediRadar</div>
+        </div>
+        <div class="group-icon disabled">
+          <svg width="30" height="26" viewBox="0 0 20 16"><rect x="1" y="3" width="18" height="12" fill="#a0a0a0" stroke="#000"/><rect x="1" y="1" width="9" height="3" fill="#a0a0a0" stroke="#000"/></svg>
+          <div class="glabel">Öneri Sistemi (Yakında)</div>
+        </div>
+        <div class="group-icon disabled">
+          <svg width="30" height="26" viewBox="0 0 20 16"><rect x="1" y="3" width="18" height="12" fill="#a0a0a0" stroke="#000"/><rect x="1" y="1" width="9" height="3" fill="#a0a0a0" stroke="#000"/></svg>
+          <div class="glabel">Chatbot (Yakında)</div>
+        </div>
+      </div>
+    </div>
+    <div class="statusbar sunken" style="margin:0 6px 6px 6px;">Hazır — bir simgeyi çalıştırmak için çift tıklayın</div>
+  </div>
+
+  <!-- ================= KREDİ BAŞVURU FORMU ================= -->
+  <div class="win" id="win-form" style="left:180px; top:90px; width:340px; display:none;">
+    <div class="titlebar" data-drag="win-form">
+      <div class="ticon"></div>
+      <div class="ttext">Kredi Başvuru Formu</div>
+      <div class="winbtn" onclick="closeWin('win-form')">×</div>
+    </div>
+    <div class="winbody">
+      <div class="field-row"><label>Yaş</label><input class="sunken" type="number" id="f-age" value="35" min="18" max="100"></div>
+      <div class="field-row"><label>Meslek Seviyesi</label>
+        <select class="sunken" id="f-job">
+          <option value="0">0 - Vasıfsız / İşsiz</option>
+          <option value="1">1 - Vasıfsız, mukim</option>
+          <option value="2" selected>2 - Vasıflı</option>
+          <option value="3">3 - Yüksek vasıflı</option>
+        </select>
+      </div>
+      <div class="field-row"><label>Cinsiyet</label>
+        <select class="sunken" id="f-sex"><option value="male">Erkek</option><option value="female">Kadın</option></select>
+      </div>
+      <div class="field-row"><label>Konut</label>
+        <select class="sunken" id="f-housing"><option value="own">Kendi evi</option><option value="rent">Kirada</option><option value="free">Ücretsiz</option></select>
+      </div>
+      <div class="field-row"><label>Vadeli Hesap</label>
+        <select class="sunken" id="f-saving"><option value="little">Az</option><option value="moderate">Orta</option><option value="quite rich">Oldukça iyi</option><option value="rich">İyi</option><option value="no_account">Hesap yok</option></select>
+      </div>
+      <div class="field-row"><label>Vadesiz Hesap</label>
+        <select class="sunken" id="f-checking"><option value="little">Az</option><option value="moderate">Orta</option><option value="rich">İyi</option><option value="no_account">Hesap yok</option></select>
+      </div>
+      <div class="field-row"><label>Kredi Tutarı (DM)</label><input class="sunken" type="number" id="f-amount" value="5000" min="1"></div>
+      <div class="field-row"><label>Vade (ay)</label><input class="sunken" type="number" id="f-duration" value="24" min="1"></div>
+      <div class="field-row"><label>Kredi Amacı</label>
+        <select class="sunken" id="f-purpose">
+          <option value="car">Araç</option>
+          <option value="radio/TV">Radyo/TV</option>
+          <option value="furniture/equipment">Mobilya/Ekipman</option>
+          <option value="business">İşletme</option>
+          <option value="education">Eğitim</option>
+        </select>
+      </div>
+      <div class="btn-row">
+        <div class="btn raised" onclick="submitApplication()">Değerlendir</div>
+        <div class="btn raised" onclick="closeWin('win-form')">İptal</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODEL BİLGİSİ ================= -->
+  <div class="win" id="win-model" style="left:260px; top:130px; width:320px; display:none;">
+    <div class="titlebar" data-drag="win-model">
+      <div class="ticon"></div>
+      <div class="ttext">Model Bilgisi</div>
+      <div class="winbtn" onclick="closeWin('win-model')">×</div>
+    </div>
+    <div class="winbody" style="font-size:12px; line-height:1.7;">
+      <b>Model:</b> Random Forest (optimize edilmiş)<br>
+      <b>Kayıt adı:</b> kredi-radar-model<br>
+      <b>Aşama:</b> Staging<br>
+      <b>CV AUC:</b> 0.756 → 0.771 (optimizasyon sonrası)<br>
+      <b>Kalite eşiği:</b> 0.70 (altı reddedilir)<br>
+      <b>Maliyet matrisi:</b> 5:1 (yanlış kabul : yanlış red)<br>
+      <b>Veri seti:</b> German Credit Data (UCI, CC BY 4.0)
+      <div class="btn-row"><div class="btn raised" onclick="closeWin('win-model')">Tamam</div></div>
+    </div>
+  </div>
+
+  <!-- ================= BENİ OKU ================= -->
+  <div class="win" id="win-readme" style="left:300px; top:160px; width:360px; display:none;">
+    <div class="titlebar" data-drag="win-readme">
+      <div class="ticon"></div>
+      <div class="ttext">Beni Oku - KrediRadar</div>
+      <div class="winbtn" onclick="closeWin('win-readme')">×</div>
+    </div>
+    <div class="winbody" style="font-size:12px; line-height:1.6;">
+      KrediRadar, banka kredi başvurularını <b>production disipliniyle</b> değerlendiren
+      uçtan uca bir MLOps sistemidir.<br><br>
+      Airflow ile otomatik pipeline, MLflow ile deney takibi ve model registry,
+      FastAPI ile gerçek zamanlı skorlama, Prometheus + Grafana ile izleme
+      bir arada çalışır.<br><br>
+      Bu arayüz, sistemi 1990'ların bankacılık yazılımı estetiğiyle sunar.
+      <div class="btn-row"><div class="btn raised" onclick="closeWin('win-readme')">Kapat</div></div>
+    </div>
+  </div>
+
+  <!-- ================= HAKKINDA ================= -->
+  <div class="win" id="win-about" style="left:150px; top:200px; width:300px; display:none;">
+    <div class="titlebar" data-drag="win-about">
+      <div class="ticon"></div>
+      <div class="ttext">Program Yöneticisi Hakkında</div>
+      <div class="winbtn" onclick="closeWin('win-about')">×</div>
+    </div>
+    <div class="winbody" style="text-align:center; font-size:12px; line-height:1.6;">
+      <b>KrediRadar Banka Sistemi</b><br>
+      Sürüm 4.0 (Monitoring Edition)<br><br>
+      MLOps Portföy Projesi<br>
+      Airflow · MLflow · FastAPI · Prometheus · Grafana
+      <div class="btn-row" style="justify-content:center;"><div class="btn raised" onclick="closeWin('win-about')">Tamam</div></div>
+    </div>
+  </div>
+
+  <!-- ================= MESAJ KUTUSU (dinamik) ================= -->
+  <div class="win" id="win-msg" style="left:340px; top:220px; width:300px; display:none; z-index:200;">
+    <div class="titlebar" data-drag="win-msg">
+      <div class="ticon"></div>
+      <div class="ttext" id="msg-title">KrediRadar</div>
+      <div class="winbtn" onclick="closeWin('win-msg')">×</div>
+    </div>
+    <div class="winbody">
+      <div class="msgbox-body">
+        <svg class="msg-icon" id="msg-icon" viewBox="0 0 32 32"></svg>
+        <div class="msg-text" id="msg-text">...</div>
+      </div>
+      <div class="btn-row"><div class="btn raised" onclick="closeWin('win-msg')" style="min-width:60px;">Tamam</div></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const API_BASE = "http://localhost:8000";
+
+function closeMenus() {
+  document.querySelectorAll('.dropdown').forEach(d => d.classList.remove('show'));
+}
+document.querySelectorAll('.menubar [data-menu]').forEach(el => {
+  el.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const id = el.getAttribute('data-menu');
+    const isOpen = document.getElementById(id).classList.contains('show');
+    closeMenus();
+    if (!isOpen) document.getElementById(id).classList.add('show');
+  });
+});
+document.addEventListener('click', closeMenus);
+
+function bringToFront(id) {
+  const wins = document.querySelectorAll('.win');
+  let max = 10;
+  wins.forEach(w => { const z = parseInt(w.style.zIndex || 10); if (z > max) max = z; });
+  document.getElementById(id).style.zIndex = max + 1;
+}
+function openWin(id) {
+  const w = document.getElementById(id);
+  w.style.display = 'flex';
+  bringToFront(id);
+}
+function closeWin(id) {
+  document.getElementById(id).style.display = 'none';
+}
+
+/* ---- sürükleme ---- */
+let dragState = null;
+document.querySelectorAll('[data-drag]').forEach(bar => {
+  bar.addEventListener('mousedown', (e) => {
+    const winId = bar.getAttribute('data-drag');
+    const win = document.getElementById(winId);
+    bringToFront(winId);
+    dragState = {
+      win, offX: e.clientX - win.offsetLeft, offY: e.clientY - win.offsetTop
+    };
+  });
+});
+document.addEventListener('mousemove', (e) => {
+  if (!dragState) return;
+  dragState.win.style.left = Math.max(0, e.clientX - dragState.offX) + 'px';
+  dragState.win.style.top = Math.max(0, e.clientY - dragState.offY) + 'px';
+});
+document.addEventListener('mouseup', () => { dragState = null; });
+
+/* ---- mesaj kutusu ikonları (basit SVG, klasik win3.1 tarz) ---- */
+const ICONS = {
+  ok: `<circle cx="16" cy="16" r="14" fill="#00a000" stroke="#000"/><path d="M9 16l5 5 9-11" stroke="#fff" stroke-width="3" fill="none"/>`,
+  bad: `<circle cx="16" cy="16" r="14" fill="#c00000" stroke="#000"/><path d="M10 10l12 12M22 10l-12 12" stroke="#fff" stroke-width="3"/>`,
+  info: `<circle cx="16" cy="16" r="14" fill="#000080" stroke="#000"/><rect x="14" y="13" width="3" height="10" fill="#fff"/><rect x="14" y="8" width="3" height="3" fill="#fff"/>`,
+  warn: `<polygon points="16,4 30,28 2,28" fill="#e0c000" stroke="#000"/><rect x="14.5" y="12" width="3" height="8" fill="#000"/><rect x="14.5" y="22" width="3" height="3" fill="#000"/>`
+};
+
+function showMsg(title, text, type) {
+  document.getElementById('msg-title').textContent = title;
+  document.getElementById('msg-text').textContent = text;
+  document.getElementById('msg-icon').innerHTML = ICONS[type] || ICONS.info;
+  openWin('win-msg');
+}
+
+/* ---- API çağrıları ---- */
+async function pingHealth() {
+  showMsg('Sistem Durumu', 'Kontrol ediliyor...', 'info');
+  try {
+    const res = await fetch(API_BASE + '/health');
+    const data = await res.json();
+    if (data.status === 'ok' && data.model_loaded) {
+      showMsg('Sistem Durumu', 'API AKTİF\nModel yüklü ve hazır.', 'ok');
+    } else {
+      showMsg('Sistem Durumu', 'API çalışıyor ancak model yüklenemedi.', 'warn');
+    }
+  } catch (err) {
+    showMsg('Bağlantı Hatası', 'API\'ye ulaşılamıyor.\n\nlocalhost:8000 üzerinde\nçalıştığından emin olun\n(docker-compose up api).', 'bad');
+  }
+}
+
+async function submitApplication() {
+  const body = {
+    "Age": parseInt(document.getElementById('f-age').value),
+    "Job": parseInt(document.getElementById('f-job').value),
+    "Sex": document.getElementById('f-sex').value,
+    "Housing": document.getElementById('f-housing').value,
+    "Saving accounts": document.getElementById('f-saving').value,
+    "Checking account": document.getElementById('f-checking').value,
+    "Credit amount": parseFloat(document.getElementById('f-amount').value),
+    "Duration": parseInt(document.getElementById('f-duration').value),
+    "Purpose": document.getElementById('f-purpose').value
+  };
+
+  showMsg('Değerlendiriliyor', 'Başvuru işleniyor, lütfen bekleyin...', 'info');
+
+  try {
+    const res = await fetch(API_BASE + '/predict', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => null);
+      throw new Error(errData ? JSON.stringify(errData.detail) : ('HTTP ' + res.status));
+    }
+    const data = await res.json();
+    if (data.prediction === 1) {
+      showMsg('Başvuru Sonucu', 'ONAYLANDI\n\nDeğerlendirme: ' + data.label.toUpperCase(), 'ok');
+    } else {
+      showMsg('Başvuru Sonucu', 'REDDEDİLDİ\n\nDeğerlendirme: ' + data.label.toUpperCase(), 'bad');
+    }
+    closeWin('win-form');
+  } catch (err) {
+    showMsg('Hata', 'Değerlendirme yapılamadı:\n' + err.message, 'bad');
+  }
+}
+</script>
+</body>
+</html>
