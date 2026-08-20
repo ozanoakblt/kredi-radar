@@ -1,0 +1,23 @@
+artifact_path: "file:c:/Users/Ozan/OneDrive/Masa\xFCst\xFC/KrediRadar/mlruns/1/models/m-045e28996d8249f09ac09dc8b76fad35/artifacts"
+flavors:
+  python_function:
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.sklearn
+    model_path: model.pkl
+    predict_fn: predict
+    python_version: 3.13.7
+  sklearn:
+    code: null
+    pickled_model: model.pkl
+    serialization_format: cloudpickle
+    sklearn_version: 1.9.0
+    skops_trusted_types: null
+mlflow_version: 3.15.1
+model_id: m-045e28996d8249f09ac09dc8b76fad35
+model_size_bytes: 1128078
+model_uuid: m-045e28996d8249f09ac09dc8b76fad35
+prompts: null
+run_id: 4c583841b3e84546925b5616c737f25b
+utc_time_created: '2026-08-11 11:36:09.689114'

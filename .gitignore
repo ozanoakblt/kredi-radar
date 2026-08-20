@@ -1,4 +1,4 @@
-﻿.venv/
+.venv/
 venv/
 __pycache__/
 *.pyc
@@ -6,7 +6,6 @@ __pycache__/
 mlflow.db
 mlruns/
 mlruns_shared/
-model_export/
 data/
 logs/
 plugins/
