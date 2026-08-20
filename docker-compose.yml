@@ -1,4 +1,4 @@
-x-airflow-common:
+﻿x-airflow-common:
   &airflow-common
   image: apache/airflow:2.9.3-python3.11
   environment:
@@ -89,5 +89,11 @@ services:
       airflow-init:
         condition: service_completed_successfully
 
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    ports:
+      - "8000:8000"
 volumes:
   postgres-db-volume:

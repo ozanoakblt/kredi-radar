@@ -1,0 +1,13 @@
+﻿.venv/
+venv/
+__pycache__/
+*.pyc
+.env
+mlflow.db
+mlruns/
+mlruns_shared/
+model_export/
+data/
+logs/
+plugins/
+german_credit_data_updated.csv
