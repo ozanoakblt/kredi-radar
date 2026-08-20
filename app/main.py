@@ -2,8 +2,11 @@
 import pandas as pd
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
+from prometheus_fastapi_instrumentator import Instrumentator
 
 app = FastAPI(title="KrediRadar API", version="1.0.0")
+
+Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
 model = None
 
