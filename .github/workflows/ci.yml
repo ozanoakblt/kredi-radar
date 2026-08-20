@@ -1,0 +1,40 @@
+﻿name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install API dependencies
+        run: |
+          pip install fastapi uvicorn pydantic mlflow pandas scikit-learn prometheus-fastapi-instrumentator
+
+      - name: Python syntax and import check
+        run: |
+          python -m py_compile app/main.py
+          python -c "import app.main"
+
+      - name: Build Docker image
+        run: docker build -f Dockerfile.api -t krediradar-api:ci .
+
+      - name: Run container smoke test
+        run: |
+          docker run -d --name ci-api -p 8000:8000 krediradar-api:ci
+          echo "Waiting for API to start..."
+          sleep 10
+          curl --fail http://localhost:8000/health || (docker logs ci-api && exit 1)
+          docker stop ci-api
+          docker rm ci-api
